@@ -2,18 +2,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Open Link</title>
+  <title>about:blank</title>
 </head>
 <body>
-  <button onclick="openBlank()">Open in about:blank</button>
+  <button onclick="openPage()">Open Link in about:blank</button>
 
   <script>
-    function openBlank() {
-      const tab = window.open("about:blank", "_blank");
+    function openPage() {
+      const w = window.open("about:blank", "_blank");
 
-      if (tab) {
-        tab.location.href =
-          "https://www.google.com/goto?url=CAESaAHrOzAVsyl251LQK1OHtoaMGKyEKrD3t_ybyiFDeVfO7NQaObQvQkWp5-gLU_kjP5lzMM2iZeNOohOTbOOsd4kVtwVkTKIQn_nE64JNNX4ubjChX5M3jlJQLArYO6lfJCrzI9paCTQh";
+      if (w) {
+        w.document.open();
+        w.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>about:blank</title></head>
+          <body style="margin:0">
+            <iframe
+              src="https://www.google.com/goto?url=CAESaAHrOzAVsyl251LQK1OHtoaMGKyEKrD3t_ybyiFDeVfO7NQaObQvQkWp5-gLU_kjP5lzMM2iZeNOohOTbOOsd4kVtwVkTKIQn_nE64JNNX4ubjChX5M3jlJQLArYO6lfJCrzI9paCTQh"
+              style="width:100vw;height:100vh;border:0">
+            </iframe>
+          </body>
+          </html>
+        `);
+        w.document.close();
+      } else {
+        alert("Allow pop-ups for this site and try again.");
       }
     }
   </script>
