@@ -1,35 +1,308 @@
-
-<!DOCTYPE html>
-<html>
+<DOCTYPE html>
+<html lang="en">
 <head>
-  <title>about:blank</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashmetry</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090d20;color:white;font-family:Arial,sans-serif}
+header{background:#111936;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{margin:0;color:#50f4ff;font-size:25px}
+button,select,input{background:#202c50;color:white;border:1px solid #526995;border-radius:7px;padding:10px;cursor:pointer}
+button:hover{background:#354a7b}
+button.active{background:#087f99;border-color:#50f4ff}
+main{max-width:1100px;margin:20px auto;padding:0 14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+canvas{width:100%;display:block;border:2px solid #334b80;border-radius:8px;background:#101c40;touch-action:manipulation}
+.panel{background:#111936;padding:16px;border-radius:10px;margin-top:12px}
+.hidden{display:none!important}
+label{display:inline-flex;align-items:center;gap:8px;margin:5px 12px 5px 0}
+input[type=number]{width:85px}
+small{color:#aebcde}
+#message{color:#50f4ff;margin:10px 0}
+#levelList{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+</style>
 </head>
 <body>
-  <button onclick="openPage()">Open Link in about:blank</button>
+<header>
+  <h1>◆ DASHMETRY</h1>
+  <div>
+    <button id="playBtn">▶ Play</button>
+    <button id="editBtn">✎ Editor</button>
+    <button id="settingsBtn">⚙ Settings</button>
+  </div>
+</header>
 
-  <script>
-    function openPage() {
-      const w = window.open("about:blank", "_blank");
+<main>
+  <div class="toolbar" id="editorTools">
+    <button class="active" data-tool="spike">▲ Spike</button>
+    <button data-tool="block">■ Block</button>
+    <button data-tool="erase">⌫ Erase</button>
+    <button id="undoBtn">↶ Undo</button>
+    <button id="clearBtn">Clear level</button>
+    <label>Level name <input id="levelName" value="My Level" maxlength="35"></label>
+    <button id="saveBtn">Save level</button>
+  </div>
 
-      if (w) {
-        w.document.open();
-        w.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head><title>about:blank</title></head>
-          <body style="margin:0">
-            <iframe
-              src="https://www.google.com/goto?url=CAESaAHrOzAVsyl251LQK1OHtoaMGKyEKrD3t_ybyiFDeVfO7NQaObQvQkWp5-gLU_kjP5lzMM2iZeNOohOTbOOsd4kVtwVkTKIQn_nE64JNNX4ubjChX5M3jlJQLArYO6lfJCrzI9paCTQh"
-              style="width:100vw;height:100vh;border:0">
-            </iframe>
-          </body>
-          </html>
-        `);
-        w.document.close();
-      } else {
-        alert("Allow pop-ups for this site and try again.");
+  <canvas id="game" width="1000" height="440"></canvas>
+  <div id="message">Editor: select a tool, then click the grid to build your level.</div>
+
+  <section class="panel hidden" id="settings">
+    <h2>Settings</h2>
+    <p>Jump key: <button id="bindBtn">Space</button></p>
+    <small>Click the button, then press the key you want to use for jumping.</small>
+    <p>
+      <label>Run speed <input id="speed" type="number" min="2" max="12" value="5"></label>
+      <label>Jump strength <input id="jump" type="number" min="8" max="18" value="13"></label>
+    </p>
+    <button id="closeSettings">Close</button>
+  </section>
+
+  <section class="panel">
+    <h3>Saved Levels</h3>
+    <div id="levelList"></div>
+    <small>Saved levels stay in this browser using local storage.</small>
+  </section>
+
+  <section class="panel">
+    <h3>Controls</h3>
+    <p>Jump: your configured key or click/tap while playing.</p>
+    <p>Editor: click a grid cell to place or remove an obstacle.</p>
+    <p>After crashing, press your jump key or click to restart.</p>
+  </section>
+</main>
+
+<script>
+(()=>{
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const ground=355,cell=40;
+const STORAGE='dashmetry_levels_v1';
+
+let mode='edit',tool='spike',jumpKey=' ',binding=false;
+let speed=5,jumpPower=13,world=0,vy=0,playerY=ground-32;
+let dead=false,won=false,score=0;
+let objects=[],undoStack=[],levelWidth=3000;
+let camera=0,frame=0;
+
+const msg=t=>document.getElementById('message').textContent=t;
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+function addObject(x,type){
+  undoStack.push(clone(objects));
+  objects=objects.filter(o=>!(o.x===x&&o.y===ground-cell));
+  if(type!=='erase')objects.push({x,y:ground-cell,type});
+  objects.sort((a,b)=>a.x-b.x);
+}
+function resetPlay(){
+  world=0;camera=0;vy=0;playerY=ground-32;
+  dead=false;won=false;score=0;frame=0;
+}
+function setMode(m){
+  mode=m;
+  document.getElementById('editorTools').classList.toggle('hidden',m!=='edit');
+  document.getElementById('playBtn').classList.toggle('active',m==='play');
+  document.getElementById('editBtn').classList.toggle('active',m==='edit');
+  if(m==='play'){resetPlay();msg('Running! Jump over the obstacles.');}
+  else msg('Editor: select a tool, then click the grid to build your level.');
+}
+document.getElementById('playBtn').onclick=()=>setMode('play');
+document.getElementById('editBtn').onclick=()=>setMode('edit');
+document.getElementById('settingsBtn').onclick=()=>{
+  document.getElementById('settings').classList.remove('hidden');
+};
+document.getElementById('closeSettings').onclick=()=>{
+  document.getElementById('settings').classList.add('hidden');
+};
+document.querySelectorAll('[data-tool]').forEach(b=>{
+  b.onclick=()=>{
+    tool=b.dataset.tool;
+    document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));
+  };
+});
+document.getElementById('undoBtn').onclick=()=>{
+  if(undoStack.length)objects=undoStack.pop();
+};
+document.getElementById('clearBtn').onclick=()=>{
+  if(confirm('Clear every obstacle in this level?')){
+    undoStack.push(clone(objects));objects=[];
+  }
+};
+document.getElementById('speed').onchange=e=>{
+  speed=Math.max(2,Math.min(12,Number(e.target.value)||5));
+  e.target.value=speed;
+};
+document.getElementById('jump').onchange=e=>{
+  jumpPower=Math.max(8,Math.min(18,Number(e.target.value)||13));
+  e.target.value=jumpPower;
+};
+
+document.getElementById('bindBtn').onclick=()=>{
+  binding=true;
+  document.getElementById('bindBtn').textContent='Press a key...';
+};
+function keyName(k){return k===' '?'Space':k.length===1?k.toUpperCase():k;}
+document.addEventListener('keydown',e=>{
+  if(binding){
+    e.preventDefault();
+    if(['Escape','Tab','Alt','Control','Shift'].includes(e.key))return;
+    jumpKey=e.key;
+    binding=false;
+    document.getElementById('bindBtn').textContent=keyName(jumpKey);
+    return;
+  }
+  if([' ','ArrowUp'].includes(e.key))e.preventDefault();
+  if(mode==='play'&&(e.key===jumpKey||e.key==='ArrowUp')){
+    if(dead||won)resetPlay();
+    else if(playerY>=ground-33)vy=-jumpPower;
+  }
+});
+canvas.addEventListener('pointerdown',e=>{
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*W/r.width;
+  const y=(e.clientY-r.top)*H/r.height;
+  if(mode==='play'){
+    if(dead||won)resetPlay();
+    else if(playerY>=ground-33)vy=-jumpPower;
+    return;
+  }
+  const wx=Math.floor((x+camera)/cell)*cell;
+  if(y<70||y>ground+10)return;
+  addObject(wx,tool);
+});
+
+function saveLevel(){
+  let levels=[];
+  try{levels=JSON.parse(localStorage.getItem(STORAGE)||'[]')}catch{}
+  const name=document.getElementById('levelName').value.trim()||'My Level';
+  const level={name,objects:clone(objects),width:levelWidth};
+  const idx=levels.findIndex(l=>l.name===name);
+  if(idx>=0)levels[idx]=level;else levels.push(level);
+  try{
+    localStorage.setItem(STORAGE,JSON.stringify(levels));
+    renderLevels();msg('Saved "'+name+'".');
+  }catch{msg('Could not save. Browser storage may be full.');}
+}
+document.getElementById('saveBtn').onclick=saveLevel;
+
+function renderLevels(){
+  const list=document.getElementById('levelList');list.innerHTML='';
+  let levels=[];
+  try{levels=JSON.parse(localStorage.getItem(STORAGE)||'[]')}catch{}
+  levels.forEach(l=>{
+    const b=document.createElement('button');b.textContent='Load: '+l.name;
+    b.onclick=()=>{
+      objects=clone(l.objects||[]);
+      levelWidth=l.width||3000;
+      document.getElementById('levelName').value=l.name;
+      undoStack=[];setMode('edit');msg('Loaded "'+l.name+'".');
+    };
+    const d=document.createElement('button');d.textContent='Delete';
+    d.onclick=()=>{
+      if(confirm('Delete '+l.name+'?')){
+        levels=levels.filter(x=>x.name!==l.name);
+        localStorage.setItem(STORAGE,JSON.stringify(levels));renderLevels();
+      }
+    };
+    list.append(b,d);
+  });
+}
+
+function drawBackground(){
+  ctx.fillStyle='#101c40';ctx.fillRect(0,0,W,H);
+  for(let x=-(camera*.25%80);x<W;x+=80){
+    ctx.strokeStyle='#1c2b55';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  for(let y=0;y<H;y+=40){
+    ctx.strokeStyle='#1c2b55';ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+  ctx.fillStyle='#202d59';ctx.fillRect(0,ground,W,H-ground);
+  ctx.fillStyle='#50f4ff';ctx.fillRect(0,ground,W,4);
+  for(let x=-(camera%40);x<W;x+=40){
+    ctx.fillStyle='#2e477c';ctx.fillRect(x,ground+15,20,3);
+  }
+}
+function drawObject(o){
+  const x=o.x-camera,y=o.y;
+  if(x<-50||x>W+50)return;
+  if(o.type==='spike'){
+    ctx.fillStyle='#ff416c';ctx.strokeStyle='#ffd4df';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,y+40);ctx.lineTo(x+20,y);ctx.lineTo(x+40,y+40);ctx.closePath();
+    ctx.fill();ctx.stroke();
+  }else if(o.type==='block'){
+    ctx.fillStyle='#9d50ff';ctx.fillRect(x,y,40,40);
+    ctx.strokeStyle='#e3caff';ctx.lineWidth=2;ctx.strokeRect(x+2,y+2,36,36);
+  }
+}
+function drawPlayer(){
+  const x=140,y=playerY;
+  ctx.save();ctx.translate(x+16,y+16);ctx.rotate((mode==='play'?frame*.08:0));
+  ctx.fillStyle='#50f4ff';ctx.fillRect(-16,-16,32,32);
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(-13,-13,26,26);
+  ctx.fillStyle='#101c40';ctx.fillRect(-8,-5,5,6);ctx.fillRect(4,-5,5,6);
+  ctx.restore();
+}
+function collision(){
+  const px=140,py=playerY,pw=32,ph=32;
+  for(const o of objects){
+    const ox=o.x-world,oy=o.y;
+    if(ox>px+pw||ox+40<px||oy>py+ph||oy+40<py)continue;
+    if(o.type==='block')return true;
+    if(o.type==='spike'){
+      const left=Math.max(px,ox),right=Math.min(px+pw,ox+40);
+      const bottom=Math.min(py+ph,oy+40);
+      for(let x=left+3;x<right-2;x+=5){
+        const surface=oy+40-Math.min(x-ox,ox+40-x)*2;
+        if(bottom>surface&&py+ph>oy+4)return true;
       }
     }
-  </script>
+  }
+  return false;
+}
+function draw(){
+  drawBackground();
+  for(const o of objects)drawObject(o);
+  if(mode==='edit'){
+    ctx.fillStyle='#fff';ctx.font='16px Arial';
+    ctx.fillText('EDITOR MODE',18,28);
+    ctx.fillStyle='#b8c8ed';ctx.fillText('Click the grid to build',18,51);
+  }else{
+    ctx.fillStyle='#fff';ctx.font='16px Arial';
+    ctx.fillText('DISTANCE: '+Math.floor(world/10),18,28);
+    ctx.fillStyle='#283b70';ctx.fillRect(18,42,220,8);
+    ctx.fillStyle='#50f4ff';ctx.fillRect(18,42,220*Math.min(1,world/levelWidth),8);
+  }
+  drawPlayer();
+  if(dead||won){
+    ctx.fillStyle='rgba(3,6,20,.78)';ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.fillStyle=won?'#50f4ff':'#ff416c';
+    ctx.font='bold 46px Arial';
+    ctx.fillText(won?'LEVEL COMPLETE!':'CRASHED!',W/2,H/2-10);
+    ctx.fillStyle='#fff';ctx.font='20px Arial';
+    ctx.fillText('Press jump or click to retry',W/2,H/2+32);
+    ctx.textAlign='left';
+  }
+}
+function loop(){
+  if(mode==='play'&&!dead&&!won){
+    world+=speed;frame++;
+    vy+=.65;playerY+=vy;
+    if(playerY>=ground-32){playerY=ground-32;vy=0;}
+    if(collision())dead=true;
+    if(world>=levelWidth)won=true;
+    camera=Math.max(0,world-140);
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+renderLevels();
+loop();
+})();
+</script>
 </body>
 </html>
+```
