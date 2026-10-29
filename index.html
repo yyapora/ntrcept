@@ -6,10 +6,11 @@
 
 
 	<html lang="en">
-    <base href="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@ae6706e5224c55594c491edfc7f5ad541e2ea02b/baseball%20bros/" </base>
-	<head>
+<head>
 
-	  <meta charset="utf-8">
+	  
+	  <base href="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@ae6706e5224c55594c491edfc7f5ad541e2ea02b/baseball%20bros/">
+<meta charset="utf-8">
 
 	  <title>BASEBALL BROS! | Official Site</title>
 	  <meta name="description" content="Online multiplayer baseball! Strikeouts, steals, and grand slams! Hit Nukes!" />
@@ -363,11 +364,11 @@
 	  </script>
 
 	  <!-- Firebase App (the core Firebase SDK) -->
-	  <script src="firebase-app.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 	  <!-- Firebase Authentication -->
-	  <script src="firebase-auth.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 	  <!-- Firebase Firestore (Database) -->
-	  <script src="firebase-firestore.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 	  <script>
 	    // Your web app's Firebase configuration
@@ -457,7 +458,20 @@
 	</head>
 
 	<body style="overflow:hidden;">
-	  <noscript>Enable JavaScript bro!</noscript>
+	  <noscript>Baseball Bros requires JavaScript in your browser to run.</noscript>
+    // If a required remote game file fails, avoid an endless silent loading screen.
+    window.setTimeout(function () {
+      var loading = document.getElementById("loading");
+      var gameCanvas = document.querySelector("#openfl-content canvas");
+      if (loading && !gameCanvas) {
+        loading.innerHTML = '<div style="max-width:520px;padding:18px;color:#fff;font:16px Arial;text-align:center;background:#161616;border:1px solid #555;border-radius:8px;">' +
+          '<strong>Baseball Bros did not finish loading.</strong><br><br>' +
+          'Check that the browser can reach cdn.jsdelivr.net and that JavaScript is enabled. ' +
+          'If this appears on several sites, try disabling content-blocking extensions for this page and reload.' +
+          '<br><br><small>GitHub Pages supports browser JavaScript, but it cannot run PHP server files.</small></div>';
+      }
+    }, 15000);
+
 	  <script>
 	    //alert("Globals:"+localStorage.getItem("/:Globals").length);
 	    /////////////////////////////////////////////////////////////////////
