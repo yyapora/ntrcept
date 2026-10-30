@@ -2,35 +2,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Dashmetry Launcher</title>
-</head>
-<body style="background:#111;color:white;font-family:Arial;text-align:center">
-<h2>Geometry Dash</h2>
-<button onclick="launch()">Launch in about:blank</button>
-
-<script>
-function launch() {
-    const w = window.open("about:blank", "_blank");
-
-    if (!w) {
-        alert("Allow popups for this site.");
-        return;
-    }
-
-    const iframe = w.document.createElement("iframe");
-
-    w.document.title = "Geometry Dash";
-    w.document.body.style.cssText =
-        "margin:0;width:100vw;height:100vh;overflow:hidden;background:black";
-
-    iframe.src = "https://kiz10.com/embed/geometry-dash-dashmetry/";
-    iframe.style.cssText =
-        "width:100%;height:100%;border:0;position:absolute;inset:0";
-    iframe.allow = "autoplay; fullscreen; gamepad";
-    iframe.allowFullscreen = true;
-
-    w.document.body.appendChild(iframe);
+<title>Dashmetry</title>
+<style>
+* { margin:0; padding:0; }
+html, body {
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:black;
 }
-</script>
+iframe {
+    width:100%;
+    height:100%;
+    border:0;
+}
+</style>
+</head>
+<body>
+<iframe
+src="https://dashedup.com/dashmetry"
+allowfullscreen>
+</iframe>
 </body>
 </html>
