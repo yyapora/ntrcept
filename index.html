@@ -1,43 +1,49 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash - Dashmetry</title>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #000;
-            font-family: Arial, sans-serif;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
-    </style>
+    <title>Geometry Dash</title>
 </head>
-
 <body>
+<script>
+    const win = window.open("about:blank", "_blank");
 
-    <iframe
-        src="https://kiz10.com/embed/geometry-dash-dashmetry/"
-        allowfullscreen
-        allow="autoplay; fullscreen; gamepad"
-        loading="eager">
-    </iframe>
-
+    if (win) {
+        win.document.open();
+        win.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Geometry Dash</title>
+                <style>
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        overflow: hidden;
+                    }
+                    html, body {
+                        width: 100%;
+                        height: 100%;
+                        background: black;
+                    }
+                    iframe {
+                        width: 100%;
+                        height: 100%;
+                        border: none;
+                    }
+                </style>
+            </head>
+            <body>
+                <iframe
+                    src="https://kiz10.com/embed/geometry-dash-dashmetry/"
+                    allowfullscreen
+                    allow="autoplay; fullscreen; gamepad">
+                </iframe>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    }
+</script>
 </body>
 </html>
